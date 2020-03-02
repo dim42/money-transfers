@@ -24,11 +24,11 @@ dependencies {
 
     testImplementation 'junit:junit:4.12'
     testImplementation 'io.vertx:vertx-unit:3.8.3'
-    testImplementation 'com.jayway.restassured:rest-assured:2.9.0'
+    testImplementation 'io.rest-assured:rest-assured:4.2.0'
     testImplementation 'org.mockito:mockito-core:3.1.0'
 }
 
-def mainVerticle = "pack.web.TransfersController"
+def mainVerticle = "pack.web.AppController"
 mainClassName = "io.vertx.core.Starter"
 run {
     args = ["run", mainVerticle]
