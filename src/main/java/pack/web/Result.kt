@@ -1,5 +1,5 @@
-package pack.web;
+package pack.web
 
-public enum Result {
+enum class Result {
     Error, Ok, Rejected
 }

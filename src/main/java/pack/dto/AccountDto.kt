@@ -1,22 +1,5 @@
-package pack.dto;
+package pack.dto
 
-import java.math.BigDecimal;
+import java.math.BigDecimal
 
-public class AccountDto {
-
-    private final String id;
-    private final BigDecimal balance;
-
-    public AccountDto(String id, BigDecimal balance) {
-        this.id = id;
-        this.balance = balance;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public BigDecimal getBalance() {
-        return balance;
-    }
-}
+class AccountDto(val id: String, val balance: BigDecimal) 

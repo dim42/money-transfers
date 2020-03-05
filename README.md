@@ -4,7 +4,10 @@ Build (JDK13 is required):
 ./gradlew build
 
 Start the server:  
-./gradlew run
+./gradlew run  
+or  
+Unarchive ./build/distributions/money-transfers-0.1.tar and run  
+./money-transfers-0.1/bin/money-transfers
 
 Create new account:  
 curl -H "Content-Type: application/json" -X POST -d '{"request_id":"<some_unique_UUID>"}' "http://localhost:8081/api/1.0/account"

@@ -1,181 +1,156 @@
-package pack.web;
+package pack.web
 
-import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.shareddata.Lock;
-import io.vertx.core.shareddata.SharedData;
-import io.vertx.ext.web.RoutingContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import pack.dao.DuplicatedRequestException;
-import pack.dto.AccountDto;
-import pack.dto.PaymentDto;
-import pack.dto.TransactionDto;
-import pack.dto.TransferDto;
-import pack.service.AccountService;
-import pack.service.PaymentService;
-import pack.web.param.*;
+import io.netty.handler.codec.http.HttpHeaderValues
+import io.vertx.core.AsyncResult
+import io.vertx.core.http.HttpHeaders
+import io.vertx.core.json.JsonObject
+import io.vertx.core.shareddata.Lock
+import io.vertx.core.shareddata.SharedData
+import io.vertx.ext.web.RoutingContext
+import org.slf4j.LoggerFactory
+import pack.dao.DuplicatedRequestException
+import pack.service.AccountService
+import pack.service.PaymentService
+import pack.web.param.*
+import java.net.HttpURLConnection
+import java.util.function.Function
+import java.util.function.Supplier
 
-import java.util.List;
-import java.util.function.Function;
-import java.util.function.Supplier;
-
-import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_JSON;
-import static io.vertx.core.http.HttpHeaders.CONTENT_TYPE;
-import static java.net.HttpURLConnection.*;
-import static pack.web.Validator.validate;
-
-public class RequestHandler {
-    private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
-
-    private static final int UNPROCESSABLE_ENTITY = 422;
-
-    private static final int LOCK_TIMEOUT = 100;
-
-    private final AccountService accountService;
-    private final PaymentService paymentService;
-    private final SharedData sharedData;
-
-    public RequestHandler(AccountService accountService, PaymentService paymentService, SharedData sharedData) {
-        this.accountService = accountService;
-        this.paymentService = paymentService;
-        this.sharedData = sharedData;
-    }
-
-    public void handleCreateAccount(RoutingContext context) {
+class RequestHandler(private val accountService: AccountService, private val paymentService: PaymentService, private val sharedData: SharedData) {
+    fun handleCreateAccount(context: RoutingContext) {
         try {
-            JsonObject json = context.getBodyAsJson();
-            AccountRq rq = json.mapTo(AccountRq.class);
-            validate(rq);
-            processAndRespond(this::createAccount, rq, context);
-        } catch (Exception e) {
-            writeErrorResponse(context, e);
+            val json = context.bodyAsJson
+            val rq = json.mapTo(AccountRq::class.java)
+            processAndRespond(Function(this::createAccount), rq, context)
+        } catch (e: Exception) {
+            writeErrorResponse(context, e)
         }
     }
 
-    private JsonObject createAccount(Rq rq) {
-        AccountRq data = (AccountRq) rq;
-        AccountDto account = accountService.createAccount(data.getRequestId());
-        return JsonObject.mapFrom(account);
+    private fun createAccount(rq: Rq): JsonObject {
+        val data = rq as AccountRq
+        val account = accountService.createAccount(data.requestId)
+        return JsonObject.mapFrom(account)
     }
 
-    public void handleGetAccount(RoutingContext context) {
+    fun handleGetAccount(context: RoutingContext) {
         try {
-            HttpServerRequest request = context.request();
-            GetAccountRq rq = new GetAccountRq(request.getParam("id"));
-            validate(rq);
-            processAndRespond(this::getAccount, rq, context);
-        } catch (Exception e) {
-            writeErrorResponse(context, e);
+            val request = context.request()
+            val rq = GetAccountRq(request.getParam("id"))
+            processAndRespond(Function(this::getAccount), rq, context)
+        } catch (e: Exception) {
+            writeErrorResponse(context, e)
         }
     }
 
-    private JsonObject getAccount(Rq rq) {
-        GetAccountRq data = (GetAccountRq) rq;
-        AccountDto account = accountService.getAccount(data.getId());
-        return JsonObject.mapFrom(account);
+    private fun getAccount(rq: Rq): JsonObject {
+        val data = rq as GetAccountRq
+        val account = accountService.getAccount(data.id)
+        return JsonObject.mapFrom(account)
     }
 
-    public void handlePayment(RoutingContext context) {
+    fun handlePayment(context: RoutingContext) {
         try {
-            JsonObject json = context.getBodyAsJson();
-            PaymentRq rq = json.mapTo(PaymentRq.class);
-            validate(rq);
-            processAndRespond(this::createPayment, rq, context);
-        } catch (Exception e) {
-            writeErrorResponse(context, e);
+            val json = context.bodyAsJson
+            val rq = json.mapTo(PaymentRq::class.java)
+            processAndRespond(Function(this::createPayment), rq, context)
+        } catch (e: Exception) {
+            writeErrorResponse(context, e)
         }
     }
 
-    private JsonObject createPayment(Rq rq) {
-        PaymentRq data = (PaymentRq) rq;
-        PaymentDto account = paymentService.createPayment(data.getRequestId(), data.getToId(), data.getAmount());
-        return JsonObject.mapFrom(account);
+    private fun createPayment(rq: Rq): JsonObject {
+        val data = rq as PaymentRq
+        val account = paymentService.createPayment(data.requestId, data.toId, data.amount)
+        return JsonObject.mapFrom(account)
     }
 
-    public void handleTransfer(RoutingContext context) {
+    fun handleTransfer(context: RoutingContext) {
         try {
-            JsonObject json = context.getBodyAsJson();
-            TransferRq rq = json.mapTo(TransferRq.class);
-            validate(rq);
-            processAndRespond(this::createTransfer, rq, context);
-        } catch (Exception e) {
-            writeErrorResponse(context, e);
+            val json = context.bodyAsJson
+            val rq = json.mapTo(TransferRq::class.java)
+            processAndRespond(Function(this::createTransfer), rq, context)
+        } catch (e: Exception) {
+            writeErrorResponse(context, e)
         }
     }
 
-    private JsonObject createTransfer(Rq rq) {
-        TransferRq data = (TransferRq) rq;
-        TransferDto transfer = paymentService.transfer(data.getRequestId(), data.getFromId(), data.getToId(), data.getAmount());
-        return JsonObject.mapFrom(transfer);
+    private fun createTransfer(rq: Rq): JsonObject {
+        val data = rq as TransferRq
+        val transfer = paymentService.transfer(data.requestId, data.fromId, data.toId, data.amount)
+        return JsonObject.mapFrom(transfer)
     }
 
-    public void handleGetTransaction(RoutingContext context) {
+    fun handleGetTransaction(context: RoutingContext) {
         try {
-            HttpServerRequest request = context.request();
-            GetTransactionRq rq = new GetTransactionRq(request.getParam("id"));
-            validate(rq);
-            processAndRespond(this::getTransaction, rq, context);
-        } catch (Exception e) {
-            writeErrorResponse(context, e);
+            val request = context.request()
+            val rq = GetTransactionRq(request.getParam("id"))
+            processAndRespond(Function(this::getTransaction), rq, context)
+        } catch (e: Exception) {
+            writeErrorResponse(context, e)
         }
     }
 
-    private JsonObject getTransaction(Rq rq) {
-        GetTransactionRq data = (GetTransactionRq) rq;
-        TransactionDto transaction = paymentService.getTransaction(data.getId());
-        return JsonObject.mapFrom(transaction);
+    private fun getTransaction(rq: Rq): JsonObject {
+        val data = rq as GetTransactionRq
+        val transaction = paymentService.getTransaction(data.id)
+        return JsonObject.mapFrom(transaction)
     }
 
-    private void processAndRespond(Function<Rq, JsonObject> operation, Rq rq, RoutingContext context) {
-        applyWithLocks(operation, () -> rq, context, rq.getLocks(), 0);
+    private fun processAndRespond(operation: Function<Rq, JsonObject>, rq: Rq, context: RoutingContext) {
+        applyWithLocks(operation, Supplier { rq }, context, rq.locks, 0)
     }
 
-    private void applyWithLocks(Function<Rq, JsonObject> operation, Supplier<Rq> params, RoutingContext context, List<String> locks, int lockId) {
-        if (lockId >= locks.size()) {
-            applyAndRespond(operation, params, context);
-            return;
+    private fun applyWithLocks(operation: Function<Rq, JsonObject>, params: Supplier<Rq>, context: RoutingContext, locks: List<String>, lockId: Int) {
+        if (lockId >= locks.size) {
+            applyAndRespond(operation, params, context)
+            return
         }
-        int nextLockId = lockId + 1;
-        sharedData.getLockWithTimeout(locks.get(lockId), LOCK_TIMEOUT, lockRes -> {
+        sharedData.getLockWithTimeout(locks[lockId], LOCK_TIMEOUT.toLong()) { lockRes: AsyncResult<Lock> ->
             if (lockRes.succeeded()) {
-                Lock result = lockRes.result();
+                val result = lockRes.result()
                 try {
-                    applyWithLocks(operation, params, context, locks, nextLockId);
+                    applyWithLocks(operation, params, context, locks, lockId + 1)
                 } finally {
-                    result.release();
+                    result.release()
                 }
             } else {
-                log.warn("Failed to get lock");
+                log.warn("Failed to get lock")
             }
-        });
-    }
-
-    private void applyAndRespond(Function<Rq, JsonObject> operation, Supplier<Rq> params, RoutingContext context) {
-        try {
-            JsonObject result = operation.apply(params.get());
-            writeResponse(context, result.put("result", Result.Ok), HTTP_OK);
-        } catch (DuplicatedRequestException e) {
-            log.error("Duplicated request error", e);
-            JsonObject json = new JsonObject().put("result", Result.Rejected).put("error", e + (e.getCause() != null ? ", cause:" + e.getCause() : ""));
-            writeResponse(context, json, HTTP_CONFLICT);
-        } catch (Exception e) {
-            log.error("Request error", e);
-            JsonObject json = new JsonObject().put("result", Result.Error).put("error", e + (e.getCause() != null ? ", cause:" + e.getCause() : ""));
-            writeResponse(context, json, HTTP_INTERNAL_ERROR);
         }
     }
 
-    private void writeErrorResponse(RoutingContext context, Exception e) {
-        log.error("Unprocessable error", e);
-        JsonObject json = new JsonObject().put("result", Result.Error).put("error", e + (e.getCause() != null ? ", cause:" + e.getCause() : ""));
-        writeResponse(context, json, UNPROCESSABLE_ENTITY);
+    private fun applyAndRespond(operation: Function<Rq, JsonObject>, params: Supplier<Rq>, context: RoutingContext) {
+        try {
+            val result = operation.apply(params.get())
+            writeResponse(context, result.put("result", Result.Ok), HttpURLConnection.HTTP_OK)
+        } catch (e: DuplicatedRequestException) {
+            log.error("Duplicated request error", e)
+            val json = JsonObject().put("result", Result.Rejected).put("error", e.toString() + if (e.cause != null) ", cause:" + e.cause else "")
+            writeResponse(context, json, HttpURLConnection.HTTP_CONFLICT)
+        } catch (e: Exception) {
+            log.error("Request error", e)
+            val json = JsonObject().put("result", Result.Error).put("error", e.toString() + if (e.cause != null) ", cause:" + e.cause else "")
+            writeResponse(context, json, HttpURLConnection.HTTP_INTERNAL_ERROR)
+        }
     }
 
-    private void writeResponse(RoutingContext context, JsonObject json, int statusCode) {
+    private fun writeErrorResponse(context: RoutingContext, e: Exception) {
+        log.error("Unprocessable error", e)
+        val json = JsonObject().put("result", Result.Error).put("error", e.toString() + if (e.cause != null) ", cause:" + e.cause else "")
+        writeResponse(context, json, UNPROCESSABLE_ENTITY)
+    }
+
+    private fun writeResponse(context: RoutingContext, json: JsonObject, statusCode: Int) {
         context.response().setChunked(true)
-                .putHeader(CONTENT_TYPE, APPLICATION_JSON)
+                .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
                 .setStatusCode(statusCode)
-                .end(json.encode());
+                .end(json.encode())
+    }
+
+    companion object {
+        private val log = LoggerFactory.getLogger(RequestHandler::class.java)
+        private const val UNPROCESSABLE_ENTITY = 422
+        private const val LOCK_TIMEOUT = 100
     }
 }

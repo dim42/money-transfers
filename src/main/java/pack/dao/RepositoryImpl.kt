@@ -1,78 +1,57 @@
-package pack.dao;
+package pack.dao
 
-import io.vertx.core.shareddata.LocalMap;
-import io.vertx.core.shareddata.SharedData;
-import pack.model.Account;
-import pack.model.Request;
-import pack.model.Transaction;
+import io.vertx.core.shareddata.SharedData
+import pack.model.Account
+import pack.model.Request
+import pack.model.Transaction
+import java.math.BigDecimal
+import java.time.LocalDateTime
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
-import static java.lang.String.format;
-
-public class RepositoryImpl implements Repository {
-
-    private static final String REQUESTS_MAP = "requestMap";
-    private static final String ACCOUNTS_MAP = "accountsMap";
-    private static final String TRANSACTIONS_MAP = "transactionsMap";
-
-    private final SharedData data;
-
-    public RepositoryImpl(SharedData data) {
-        this.data = data;
-    }
-
-    @Override
-    public Request createRequest(String id) {
-        LocalMap<String, Request> map = data.getLocalMap(REQUESTS_MAP);
-        return map.compute(id, (id_, prev) -> {
+class RepositoryImpl(private val data: SharedData) : Repository {
+    override fun createRequest(id: String): Request {
+        val map = data.getLocalMap<String, Request>(REQUESTS_MAP)
+        return map.compute(id) { _: String?, prev: Request? ->
             if (prev != null) {
-                throw new DuplicatedRequestException(format("Request (%s) already exists", id));
+                throw DuplicatedRequestException("Request ($id) already exists")
             }
-            return new Request(id);
-        });
+            Request(id)
+        }!!
     }
 
-    @Override
-    public Account createAccount(String id) {
-        LocalMap<String, Account> map = data.getLocalMap(ACCOUNTS_MAP);
-        return map.compute(id, (id_, prev) -> {
+    override fun createAccount(id: String): Account {
+        val map = data.getLocalMap<String, Account>(ACCOUNTS_MAP)
+        return map.compute(id) { _: String?, prev: Account? ->
             if (prev != null) {
-                throw new DuplicatedRequestException(format("Account (%s) already exists", id));
+                throw DuplicatedRequestException("Account ($id) already exists")
             }
-            return new Account(id);
-        });
+            Account(id)
+        }!!
     }
 
-    @Override
-    public Account getAccount(String id) {
-        LocalMap<String, Account> map = data.getLocalMap(ACCOUNTS_MAP);
-        Account account = map.get(id);
-        if (account == null) {
-            throw new RuntimeException(format("Account (%s) is not found", id));
-        }
-        return account;
+    override fun getAccount(id: String): Account {
+        val map = data.getLocalMap<String, Account>(ACCOUNTS_MAP)
+        return map[id] ?: throw RuntimeException("Account ($id) is not found")
     }
 
-    @Override
-    public Transaction createTransaction(String id, String fromId, String toId, BigDecimal amount, LocalDateTime dateTime) {
-        LocalMap<String, Transaction> map = data.getLocalMap(TRANSACTIONS_MAP);
-        return map.compute(id, (id_, prev) -> {
+    override fun createTransaction(id: String, fromId: String?, toId: String, amount: BigDecimal, dateTime: LocalDateTime): Transaction {
+        val map = data.getLocalMap<String, Transaction>(TRANSACTIONS_MAP)
+        return map.compute(id) { _: String?, prev: Transaction? ->
             if (prev != null) {
-                throw new DuplicatedRequestException(format("Transaction (%s) already exists", id));// should not happen
+                throw DuplicatedRequestException("Transaction ($id) already exists") // should not happen
             }
-            return new Transaction(id, fromId, toId, amount, dateTime);
-        });
+            Transaction(id, fromId, toId, amount, dateTime)
+        }!!
     }
 
-    @Override
-    public Transaction getTransaction(String id) {
-        LocalMap<String, Transaction> map = data.getLocalMap(TRANSACTIONS_MAP);
-        Transaction transaction = map.get(id);
-        if (transaction == null) {
-            throw new RuntimeException(format("Transaction (%s) is not found", id));
-        }
-        return transaction;
+    override fun getTransaction(id: String): Transaction {
+        val map = data.getLocalMap<String, Transaction>(TRANSACTIONS_MAP)
+        return map[id] ?: throw RuntimeException("Transaction ($id) is not found")
     }
+
+    companion object {
+        private const val REQUESTS_MAP = "requestMap"
+        private const val ACCOUNTS_MAP = "accountsMap"
+        private const val TRANSACTIONS_MAP = "transactionsMap"
+    }
+
 }

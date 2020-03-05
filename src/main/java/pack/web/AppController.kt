@@ -1,50 +1,50 @@
-package pack.web;
+package pack.web
 
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.handler.BodyHandler;
-import pack.dao.Repository;
-import pack.dao.RepositoryImpl;
-import pack.service.AccountService;
-import pack.service.PaymentService;
+import io.netty.handler.codec.http.HttpHeaderValues
+import io.vertx.core.AbstractVerticle
+import io.vertx.core.Vertx
+import io.vertx.core.VertxOptions
+import io.vertx.ext.web.Router
+import io.vertx.ext.web.handler.BodyHandler
+import pack.dao.Repository
+import pack.dao.RepositoryImpl
+import pack.service.AccountService
+import pack.service.PaymentService
 
-import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_JSON;
+class AppController : AbstractVerticle() {
+    override fun start() {
+        val repository: Repository = RepositoryImpl(vertx.sharedData())
+        val accountService = AccountService(repository)
+        val paymentService = PaymentService(repository)
 
-public class AppController extends AbstractVerticle {
+        val handler = RequestHandler(accountService, paymentService, vertx.sharedData())
+        val restAPI = Router.router(vertx)
+        restAPI.route().handler(BodyHandler.create())
+        restAPI.route().consumes(HttpHeaderValues.APPLICATION_JSON.toString())
+        restAPI.route().produces(HttpHeaderValues.APPLICATION_JSON.toString())
 
-    private static final String HOST = "localhost";
-    private static final int PORT = 8081;
-    private static final String ROOT_PATH = "/api/";
-    private static final String API_VERSION = "1.0";
+        restAPI.post("/account").handler(handler::handleCreateAccount)
+        restAPI["/account/:id"].handler(handler::handleGetAccount)
+        restAPI.post("/payment").handler(handler::handlePayment)
+        restAPI.post("/transfer").handler(handler::handleTransfer)
+        restAPI["/transaction/:id"].handler(handler::handleGetTransaction)
 
-    public static void main(String[] args) {
-        VertxOptions vertxOptions = new VertxOptions();
-        vertxOptions.setPreferNativeTransport(true);
-        Vertx.vertx(vertxOptions).deployVerticle(new AppController());
+        val mainRouter = Router.router(vertx)
+        mainRouter.mountSubRouter(ROOT_PATH + API_VERSION, restAPI)
+        vertx.createHttpServer().requestHandler(mainRouter).listen(PORT, HOST)
     }
 
-    @Override
-    public void start() {
-        Repository repository = new RepositoryImpl(vertx.sharedData());
-        AccountService accountService = new AccountService(repository);
-        PaymentService paymentService = new PaymentService(repository);
-        RequestHandler handler = new RequestHandler(accountService, paymentService, vertx.sharedData());
+    companion object {
+        private const val HOST = "localhost"
+        private const val PORT = 8081
+        private const val ROOT_PATH = "/api/"
+        private const val API_VERSION = "1.0"
 
-        Router restAPI = Router.router(vertx);
-        restAPI.route().handler(BodyHandler.create());
-        restAPI.route().consumes(APPLICATION_JSON.toString());
-        restAPI.route().produces(APPLICATION_JSON.toString());
-
-        restAPI.post("/account").handler(handler::handleCreateAccount);
-        restAPI.get("/account/:id").handler(handler::handleGetAccount);
-        restAPI.post("/payment").handler(handler::handlePayment);
-        restAPI.post("/transfer").handler(handler::handleTransfer);
-        restAPI.get("/transaction/:id").handler(handler::handleGetTransaction);
-
-        Router mainRouter = Router.router(vertx);
-        mainRouter.mountSubRouter(ROOT_PATH + API_VERSION, restAPI);
-        vertx.createHttpServer().requestHandler(mainRouter).listen(PORT, HOST);
+        @JvmStatic
+        fun main(args: Array<String>) {
+            val vertxOptions = VertxOptions()
+            vertxOptions.preferNativeTransport = true
+            Vertx.vertx(vertxOptions).deployVerticle(AppController())
+        }
     }
 }

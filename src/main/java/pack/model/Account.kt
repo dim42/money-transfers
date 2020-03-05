@@ -1,38 +1,20 @@
-package pack.model;
+package pack.model
 
-import io.vertx.core.shareddata.Shareable;
+import io.vertx.core.shareddata.Shareable
+import java.math.BigDecimal
 
-import java.math.BigDecimal;
+class Account // TODO: +name, currency, state, created 
+(val id: String, var balance: BigDecimal = BigDecimal.ZERO) : Shareable {
 
-import static java.math.BigDecimal.ZERO;
-
-public class Account implements Shareable {
-
-    private final String id;
-    private BigDecimal balance = ZERO;
-    // TODO: name, currency, state, created 
-
-    public Account(String id) {
-        this.id = id;
+    fun debit(amount: BigDecimal?) {
+        balance = balance.subtract(amount)
     }
 
-    public String getId() {
-        return id;
+    fun credit(amount: BigDecimal) {
+        balance = balance.add(amount)
     }
 
-    public BigDecimal getBalance() {
-        return balance != null ? balance : ZERO;
-    }
-
-    public void debit(BigDecimal amount) {
-        balance = balance.subtract(amount);
-    }
-
-    public void credit(BigDecimal amount) {
-        balance = balance == null ? amount : balance.add(amount);
-    }
-
-    public boolean greater(Account account) {
-        return id.compareTo(account.id) > 0;
+    fun greater(account: Account): Boolean {
+        return id > account.id
     }
 }
