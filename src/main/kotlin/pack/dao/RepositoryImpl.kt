@@ -8,6 +8,13 @@ import java.math.BigDecimal
 import java.time.LocalDateTime
 
 class RepositoryImpl(private val data: SharedData) : Repository {
+
+    companion object {
+        private const val REQUESTS_MAP = "requestMap"
+        private const val ACCOUNTS_MAP = "accountsMap"
+        private const val TRANSACTIONS_MAP = "transactionsMap"
+    }
+
     override fun createRequest(id: String): Request {
         val map = data.getLocalMap<String, Request>(REQUESTS_MAP)
         return map.compute(id) { _: String?, prev: Request? ->
@@ -47,11 +54,4 @@ class RepositoryImpl(private val data: SharedData) : Repository {
         val map = data.getLocalMap<String, Transaction>(TRANSACTIONS_MAP)
         return map[id] ?: throw RuntimeException("Transaction ($id) is not found")
     }
-
-    companion object {
-        private const val REQUESTS_MAP = "requestMap"
-        private const val ACCOUNTS_MAP = "accountsMap"
-        private const val TRANSACTIONS_MAP = "transactionsMap"
-    }
-
 }

@@ -25,5 +25,4 @@ class AccountService(private val repository: Repository) {
     companion object {
         private val log = LoggerFactory.getLogger(AccountService::class.java)
     }
-
 }

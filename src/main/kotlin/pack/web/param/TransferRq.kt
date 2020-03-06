@@ -1,7 +1,7 @@
 package pack.web.param
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import pack.web.Validator.checkWithScale
+import pack.web.Validator.checkAndScale
 import pack.web.Validator.requireNotBlank
 import java.math.BigDecimal
 import java.util.stream.Collectors.toList
@@ -15,7 +15,7 @@ class TransferRq( // To provide idempotence of (duplicated) requests
     val requestId: String = requireNotBlank(requestId, "request_id")
     val fromId: String = requireNotBlank(fromId, "source_acc_id")
     val toId: String = requireNotBlank(toId, "target_acc_id")
-    val amount: BigDecimal = checkWithScale(amount)
+    val amount: BigDecimal = checkAndScale(amount)
 
     init {
         require(fromId != toId) { "Source and target accounts should be different" }

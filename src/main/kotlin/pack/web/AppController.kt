@@ -1,6 +1,6 @@
 package pack.web
 
-import io.netty.handler.codec.http.HttpHeaderValues
+import io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_JSON
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Vertx
 import io.vertx.core.VertxOptions
@@ -20,8 +20,8 @@ class AppController : AbstractVerticle() {
         val handler = RequestHandler(accountService, paymentService, vertx.sharedData())
         val restAPI = Router.router(vertx)
         restAPI.route().handler(BodyHandler.create())
-        restAPI.route().consumes(HttpHeaderValues.APPLICATION_JSON.toString())
-        restAPI.route().produces(HttpHeaderValues.APPLICATION_JSON.toString())
+        restAPI.route().consumes(APPLICATION_JSON.toString())
+        restAPI.route().produces(APPLICATION_JSON.toString())
 
         restAPI.post("/account").handler(handler::handleCreateAccount)
         restAPI["/account/:id"].handler(handler::handleGetAccount)

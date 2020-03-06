@@ -1,8 +1,8 @@
 package pack.web
 
-import io.netty.handler.codec.http.HttpHeaderValues
+import io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_JSON
 import io.vertx.core.AsyncResult
-import io.vertx.core.http.HttpHeaders
+import io.vertx.core.http.HttpHeaders.CONTENT_TYPE
 import io.vertx.core.json.JsonObject
 import io.vertx.core.shareddata.Lock
 import io.vertx.core.shareddata.SharedData
@@ -11,12 +11,20 @@ import org.slf4j.LoggerFactory
 import pack.dao.DuplicatedRequestException
 import pack.service.AccountService
 import pack.service.PaymentService
+import pack.web.Result.*
 import pack.web.param.*
-import java.net.HttpURLConnection
+import java.net.HttpURLConnection.*
 import java.util.function.Function
 import java.util.function.Supplier
 
 class RequestHandler(private val accountService: AccountService, private val paymentService: PaymentService, private val sharedData: SharedData) {
+
+    companion object {
+        private val log = LoggerFactory.getLogger(RequestHandler::class.java)
+        private const val UNPROCESSABLE_ENTITY = 422
+        private const val LOCK_TIMEOUT = 100
+    }
+
     fun handleCreateAccount(context: RoutingContext) {
         try {
             val json = context.bodyAsJson
@@ -123,34 +131,28 @@ class RequestHandler(private val accountService: AccountService, private val pay
     private fun applyAndRespond(operation: Function<Rq, JsonObject>, params: Supplier<Rq>, context: RoutingContext) {
         try {
             val result = operation.apply(params.get())
-            writeResponse(context, result.put("result", Result.Ok), HttpURLConnection.HTTP_OK)
+            writeResponse(context, result.put("result", Ok), HTTP_OK)
         } catch (e: DuplicatedRequestException) {
             log.error("Duplicated request error", e)
-            val json = JsonObject().put("result", Result.Rejected).put("error", e.toString() + if (e.cause != null) ", cause:" + e.cause else "")
-            writeResponse(context, json, HttpURLConnection.HTTP_CONFLICT)
+            val json = JsonObject().put("result", Rejected).put("error", e.toString() + if (e.cause != null) ", cause:" + e.cause else "")
+            writeResponse(context, json, HTTP_CONFLICT)
         } catch (e: Exception) {
             log.error("Request error", e)
-            val json = JsonObject().put("result", Result.Error).put("error", e.toString() + if (e.cause != null) ", cause:" + e.cause else "")
-            writeResponse(context, json, HttpURLConnection.HTTP_INTERNAL_ERROR)
+            val json = JsonObject().put("result", Error).put("error", e.toString() + if (e.cause != null) ", cause:" + e.cause else "")
+            writeResponse(context, json, HTTP_INTERNAL_ERROR)
         }
     }
 
     private fun writeErrorResponse(context: RoutingContext, e: Exception) {
         log.error("Unprocessable error", e)
-        val json = JsonObject().put("result", Result.Error).put("error", e.toString() + if (e.cause != null) ", cause:" + e.cause else "")
+        val json = JsonObject().put("result", Error).put("error", e.toString() + if (e.cause != null) ", cause:" + e.cause else "")
         writeResponse(context, json, UNPROCESSABLE_ENTITY)
     }
 
     private fun writeResponse(context: RoutingContext, json: JsonObject, statusCode: Int) {
         context.response().setChunked(true)
-                .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+                .putHeader(CONTENT_TYPE, APPLICATION_JSON)
                 .setStatusCode(statusCode)
                 .end(json.encode())
-    }
-
-    companion object {
-        private val log = LoggerFactory.getLogger(RequestHandler::class.java)
-        private const val UNPROCESSABLE_ENTITY = 422
-        private const val LOCK_TIMEOUT = 100
     }
 }

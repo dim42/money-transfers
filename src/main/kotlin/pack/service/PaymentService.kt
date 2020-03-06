@@ -6,7 +6,6 @@ import pack.dto.PaymentDto
 import pack.dto.TransactionDto
 import pack.dto.TransferDto
 import pack.model.Account
-import java.lang.String.format
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.*
@@ -47,12 +46,11 @@ class PaymentService(private val repository: Repository) {
 
     private fun checkInsufficientBalance(account: Account, amount: BigDecimal) {
         if (account.balance < amount) {
-            throw RuntimeException(format("Insufficient balance (%s) for account:%s, required %s", account.balance, account.id, amount))
+            throw RuntimeException("Insufficient balance (${account.balance}) for account:${account.id}, required $amount")
         }
     }
 
     companion object {
         private val log = LoggerFactory.getLogger(PaymentService::class.java)
     }
-
 }

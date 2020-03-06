@@ -23,6 +23,10 @@ import java.util.*
 
 @RunWith(VertxUnitRunner::class)
 class IntegrationTest {
+    companion object {
+        private val log = LoggerFactory.getLogger(IntegrationTest::class.java)
+    }
+
     private var vertx: Vertx? = null
 
     @Before
@@ -44,18 +48,21 @@ class IntegrationTest {
     fun testCreateAndGetAccount_andDuplicateRequestRejected() {
         val requestId = UUID.randomUUID()
         val response = given()
-                .body(format("{\"request_id\":\"%s\"}", requestId)).contentType(ContentType.JSON).accept(ContentType.JSON)
+                .body("{\"request_id\":\"$requestId\"}").contentType(ContentType.JSON).accept(ContentType.JSON)
                 .post("/api/1.0/account")
                 .thenReturn()
+
         val fields = response.`as`<Map<String, Any>>(MutableMap::class.java)
         assertThat(response.statusCode(), equalTo(200))
         assertThat(fields["result"] as String, equalTo("Ok"))
         val accId = fields["id"] as String?
         assertNotNull(accId)
+
         get("/api/1.0/account/$accId")
                 .then().assertThat().statusCode(200).body(equalTo("{\"id\":\"$accId\",\"balance\":0,\"result\":\"Ok\"}"))
         get("/api/1.0/account/" + "abc123")
                 .then().assertThat().statusCode(500).body("result", equalTo("Error")).body("error", containsString("Account (abc123) is not found"))
+
         given()
                 .body("{\"request_id\":\"$requestId\"}")
                 .post("/api/1.0/account")
@@ -66,18 +73,21 @@ class IntegrationTest {
     fun testPayment_forOneAccountAndDuplicateRequestRejected() {
         val accId = createAccount()
         val requestId = UUID.randomUUID()
+
         val response = given()
                 .body("{\"request_id\":\"$requestId\", \"target_acc_id\":\"$accId\", \"amount\":75.62}")
                 .post("/api/1.0/payment")
                 .thenReturn()
+
         val fields = response.`as`<Map<String, Any>>(MutableMap::class.java)
         assertThat(response.statusCode(), equalTo(200))
         val transaction = fields["id"] as String?
         assertNotNull(transaction)
         assertThat(fields["result"] as String, equalTo("Ok"))
         assertNotNull(fields["date_time"])
+
         get("/api/1.0/account/$accId")
-                .then().assertThat().statusCode(200).body(equalTo(format("{\"id\":\"%s\",\"balance\":75.62,\"result\":\"Ok\"}", accId)))
+                .then().assertThat().statusCode(200).body(equalTo("{\"id\":\"$accId\",\"balance\":75.62,\"result\":\"Ok\"}"))
         get("/api/1.0/transaction/$transaction")
                 .then().assertThat().statusCode(200)
                 .body("id", equalTo(transaction))
@@ -87,6 +97,7 @@ class IntegrationTest {
                 .body("date_time", containsString(now().year.toString()))
         get("/api/1.0/transaction/" + "tx22")
                 .then().assertThat().statusCode(500).body("result", equalTo("Error")).body("error", containsString("Transaction (tx22) is not found"))
+
         given()
                 .body("{\"request_id\":\"$requestId\", \"target_acc_id\":\"$accId\", \"amount\":75.62}")
                 .post("/api/1.0/payment")
@@ -100,16 +111,19 @@ class IntegrationTest {
         createPayment(fromAccId, "100")
         createPayment(toAccId, "50")
         val requestId = UUID.randomUUID()
+
         val response = given()
                 .body("{\"request_id\":\"$requestId\", \"source_acc_id\":\"$fromAccId\", \"target_acc_id\":\"$toAccId\", \"amount\":21.42}")
                 .post("/api/1.0/transfer")
                 .thenReturn()
+
         val fields = response.`as`<Map<String, Any>>(MutableMap::class.java)
         assertThat(response.statusCode(), equalTo(200))
         val transaction = fields["id"] as String?
         assertNotNull(transaction)
         assertThat(fields["result"] as String, equalTo("Ok"))
         assertNotNull(fields["date_time"])
+
         get("/api/1.0/transaction/$transaction")
                 .then().assertThat().statusCode(200)
                 .body("id", equalTo(transaction))
@@ -121,6 +135,7 @@ class IntegrationTest {
                 .then().assertThat().body(equalTo("{\"id\":\"$fromAccId\",\"balance\":78.58,\"result\":\"Ok\"}"))
         get("/api/1.0/account/$toAccId")
                 .then().assertThat().body(equalTo("{\"id\":\"$toAccId\",\"balance\":71.42,\"result\":\"Ok\"}"))
+
         given()
                 .body("{\"request_id\":\"$requestId\", \"source_acc_id\":\"$fromAccId\", \"target_acc_id\":\"$toAccId\", \"amount\":21.42}")
                 .post("/api/1.0/transfer")
@@ -131,6 +146,7 @@ class IntegrationTest {
     fun testTransfer_toTheSameAccount() {
         val fromAccId = createAccount()
         createPayment(fromAccId, "100")
+
         given()
                 .body("{\"request_id\":\"${UUID.randomUUID()}\", \"source_acc_id\":\"$fromAccId\", \"target_acc_id\":\"$fromAccId\", \"amount\":21.42}")
                 .post("/api/1.0/transfer")
@@ -143,6 +159,7 @@ class IntegrationTest {
         val toAccId = createAccount()
         createPayment(fromAccId, "100")
         createPayment(toAccId, "50")
+
         given()
                 .body("{\"request_id\":\"${UUID.randomUUID()}\", \"source_acc_id\":\"$fromAccId\", \"target_acc_id\":\"$toAccId\", \"amount\":101}")
                 .post("/api/1.0/transfer")
@@ -152,6 +169,7 @@ class IntegrationTest {
     @Test
     fun testTransfer_noSourceAccount() {
         val toAccId = createAccount()
+
         given()
                 .body(format("{\"request_id\":\"%s\", \"source_acc_id\":\"%s\", \"target_acc_id\":\"%s\", \"amount\":101}", UUID.randomUUID(), "abc123", toAccId))
                 .post("/api/1.0/transfer")
@@ -170,6 +188,7 @@ class IntegrationTest {
     fun testTransfer_noTargetAccount() {
         val fromAccId = createAccount()
         createPayment(fromAccId, "100")
+
         given()
                 .body(format("{\"request_id\":\"%s\", \"source_acc_id\":\"%s\", \"target_acc_id\":\"%s\", \"amount\":21.42}", UUID.randomUUID(), fromAccId, "abc124"))
                 .post("/api/1.0/transfer")
@@ -213,6 +232,7 @@ class IntegrationTest {
                 .body("{\"request_id\":\"${UUID.randomUUID()}\"}")
                 .post("/api/1.0/account")
                 .thenReturn()
+
         assertThat(response.statusCode(), equalTo(200))
         val fields = response.`as`<Map<String, Any>>(MutableMap::class.java)
         val accId = fields["id"] as String?
@@ -222,12 +242,8 @@ class IntegrationTest {
 
     private fun createPayment(fromAccId: String?, amount: String) {
         given()
-                .body(format("{\"request_id\":\"%s\", \"target_acc_id\":\"%s\", \"amount\":%s}", UUID.randomUUID(), fromAccId, amount))
+                .body("{\"request_id\":\"${UUID.randomUUID()}\", \"target_acc_id\":\"$fromAccId\", \"amount\":$amount}")
                 .post("/api/1.0/payment")
                 .then().assertThat().statusCode(200)
-    }
-
-    companion object {
-        private val log = LoggerFactory.getLogger(IntegrationTest::class.java)
     }
 }
