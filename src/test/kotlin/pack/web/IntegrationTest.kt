@@ -3,17 +3,19 @@ package pack.web
 import io.restassured.RestAssured
 import io.restassured.RestAssured.get
 import io.restassured.RestAssured.given
-import io.restassured.http.ContentType
+import io.restassured.http.ContentType.JSON
 import io.vertx.core.DeploymentOptions
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.unit.TestContext
+import io.vertx.ext.unit.junit.RunTestOnContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import org.hamcrest.CoreMatchers.*
 import org.junit.After
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertThat
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.slf4j.LoggerFactory
@@ -27,28 +29,30 @@ class IntegrationTest {
         private val log = LoggerFactory.getLogger(IntegrationTest::class.java)
     }
 
-    private var vertx: Vertx? = null
+    @get:Rule
+    var runTestOnContextRule = RunTestOnContext()
+    private lateinit var vertx: Vertx
 
     @Before
     fun setUp(context: TestContext) {
-        vertx = Vertx.vertx()
+        vertx = runTestOnContextRule.vertx()
         val port = 8081
         val options = DeploymentOptions()
                 .setConfig(JsonObject().put("http.port", port))
-        vertx!!.deployVerticle(AppController::class.java.name, options, context.asyncAssertSuccess())
+        vertx.deployVerticle(AppController::class.java.name, options, context.asyncAssertSuccess())
         RestAssured.port = port
     }
 
     @After
     fun tearDown(context: TestContext) {
-        vertx!!.close(context.asyncAssertSuccess())
+        vertx.close(context.asyncAssertSuccess())
     }
 
     @Test
     fun testCreateAndGetAccount_andDuplicateRequestRejected() {
         val requestId = UUID.randomUUID()
         val response = given()
-                .body("{\"request_id\":\"$requestId\"}").contentType(ContentType.JSON).accept(ContentType.JSON)
+                .body("{\"request_id\":\"$requestId\"}").contentType(JSON).accept(JSON)
                 .post("/api/1.0/account")
                 .thenReturn()
 
